@@ -3,9 +3,9 @@
 #include "windows/window.h"
 
 namespace rvsim {
-class SimpleWindow : public Window {
+class EditorWindow : public Window {
  public:
-  SimpleWindow(std::shared_ptr<Context> context) : Window(std::move(context)) {}
+  EditorWindow(std::shared_ptr<Context> context) : Window(std::move(context)) {}
   void Render() override;
 
  private:

@@ -1,6 +1,8 @@
 #include "context.h"
+
 #include <future>
 #include <thread>
+
 #include "TextEditor.h"
 #include "imgui.h"
 #include "ranges"
@@ -10,11 +12,10 @@ Context::Context() : clear_color_(0.0f, 0.0f, 0.0313f, 1.0f) {
   text_editor_.SetLanguage(TextEditor::Language::Python());
 }
 
-const ImVec4& Context::clear_color() const {
-  return clear_color_;
-}
+const ImVec4& Context::clear_color() const { return clear_color_; }
 
 void Context::StartCompilation() {
+  text_editor_.SetReadOnlyEnabled(true);
   compilation_future_ =
       std::async(std::launch::async, [this]() -> std::vector<std::string> {
         // Simulate a long compilation process
@@ -23,7 +24,10 @@ void Context::StartCompilation() {
                        std::views::transform([](auto&& line) {
                          return std::string(line.begin(), line.end());
                        });
-        return std::vector(program.begin(), program.end());
+        auto result = std::vector(program.begin(), program.end());
+        text_editor_.SetReadOnlyEnabled(false);
+        return result;
       });
 }
+
 }  // namespace rvsim

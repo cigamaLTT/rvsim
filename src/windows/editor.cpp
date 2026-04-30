@@ -1,10 +1,10 @@
-#include "windows/simple_window.h"
 #include "TextEditor.h"
 #include "imgui.h"
+#include "windows/editor_window.h"
 
 namespace rvsim {
-void SimpleWindow::Render() {
-  ImGui::Begin("Simple Window");
+void EditorWindow::Render() {
+  ImGui::Begin("Text Editor");
   auto area = ImGui::GetContentRegionAvail();
   auto& style = ImGui::GetStyle();
   auto& ctx = this->context();
@@ -14,9 +14,6 @@ void SimpleWindow::Render() {
   auto monospace_font = ctx.monospace_font();
   ImGui::PushFont(monospace_font);
   ctx.text_editor().Render("TextEditor", editorSize);
-  if (ctx.is_compiling()) {
-    ctx.text_editor().SetReadOnlyEnabled(true);
-  }
   ImGui::PopFont();
   if (ImGui::Button(ctx.is_compiling() ? "Compiling..." : "Compile")) {
     if (!ctx.is_compiling()) {
