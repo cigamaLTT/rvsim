@@ -272,4 +272,18 @@ if(NOT EMSCRIPTEN AND RVSIM_BUILD_TESTS)
     RVSIM_TESTDATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata"
   )
   gtest_discover_tests(rvsim_tests DISCOVERY_MODE PRE_TEST)
+
+  # End-to-end CLI checks.
+  add_test(NAME cli.run_fibonacci
+    COMMAND rvsim_cli run "${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/fibonacci.s" --dump-regs)
+  set_tests_properties(cli.run_fibonacci PROPERTIES
+    PASS_REGULAR_EXPRESSION "recursive fib\\(15\\) = 610.*instret")
+  add_test(NAME cli.run_fibonacci_rv64
+    COMMAND rvsim_cli run "${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/fibonacci.s" --arch rv64i)
+  set_tests_properties(cli.run_fibonacci_rv64 PROPERTIES
+    PASS_REGULAR_EXPRESSION "recursive fib\\(15\\) = 610")
+  add_test(NAME cli.assemble_disasm
+    COMMAND rvsim_cli assemble "${CMAKE_CURRENT_SOURCE_DIR}/tests/testdata/quicksort.s" --disasm)
+  set_tests_properties(cli.assemble_disasm PROPERTIES
+    PASS_REGULAR_EXPRESSION "<quicksort>:")
 endif()
