@@ -1,0 +1,74 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "native-debug",
+      "displayName": "Native Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/native-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "native-release",
+      "displayName": "Native Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/native-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "web",
+      "displayName": "Web (Emscripten via EMSDK)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/web",
+      "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "notEquals",
+        "lhs": "$penv{EMSDK}",
+        "rhs": ""
+      }
+    },
+    {
+      "name": "web-emcmake",
+      "displayName": "Web (via emcmake wrapper)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/web",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "native-debug",
+      "configurePreset": "native-debug"
+    },
+    {
+      "name": "native-release",
+      "configurePreset": "native-release"
+    },
+    {
+      "name": "web",
+      "configurePreset": "web"
+    },
+    {
+      "name": "web-emcmake",
+      "configurePreset": "web-emcmake"
+    }
+  ]
+}
