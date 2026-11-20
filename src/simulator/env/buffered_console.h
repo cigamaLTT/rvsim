@@ -27,6 +27,12 @@ class BufferedConsole final : public ConsoleIo {
   // Output interleaved in the order it was written.
   const std::string& combined_text() const { return combined_; }
 
+  // Appends text to the combined transcript only (e.g. echoed stdin).
+  void AppendTranscript(std::string_view text) { combined_.append(text); }
+  // Keeps at most the last `max_bytes` of each output buffer.
+  void TrimOutput(size_t max_bytes);
+  bool has_pending_input() const { return !input_.empty(); }
+
   void ClearOutput();
   void Reset();
 

@@ -39,6 +39,14 @@ std::optional<int> BufferedConsole::ReadChar() {
   return static_cast<int>(c);
 }
 
+void BufferedConsole::TrimOutput(size_t max_bytes) {
+  for (std::string* buffer : {&stdout_, &stderr_, &combined_}) {
+    if (buffer->size() > max_bytes) {
+      buffer->erase(0, buffer->size() - max_bytes);
+    }
+  }
+}
+
 void BufferedConsole::ClearOutput() {
   stdout_.clear();
   stderr_.clear();
