@@ -1,7 +1,9 @@
 #include "app.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <print>
+
 #include "emscripten_mainloop_stub.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -49,8 +51,11 @@ App::App(std::shared_ptr<Context> context) : context_(context) {
   // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
 #endif
 
-  float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(
-      glfwGetPrimaryMonitor());  // Valid on GLFW 3.3+ only
+  float main_scale = 1.0f;
+  if (GLFWmonitor* primary_monitor = glfwGetPrimaryMonitor()) {
+    main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(
+        primary_monitor);  // Valid on GLFW 3.3+ only
+  }
   window_ = glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale),
                              "rvsim | RISC-V Simulator", nullptr, nullptr);
   if (window_ == nullptr) {
@@ -97,6 +102,9 @@ App::App(std::shared_ptr<Context> context) : context_(context) {
 }
 
 App::~App() {
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
   glfwDestroyWindow(window_);
   glfwTerminate();
 }
@@ -111,7 +119,7 @@ void App::Loop() {
   io.IniFilename = nullptr;
   EMSCRIPTEN_MAINLOOP_BEGIN
 #else
-  while (!glfwWindowShouldClose(window))
+  while (!glfwWindowShouldClose(window_))
 #endif
   {
     // Poll and handle events (inputs, window resize, etc.)
