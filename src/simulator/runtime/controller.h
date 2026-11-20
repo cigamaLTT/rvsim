@@ -150,7 +150,11 @@ class SimulationController {
   void Pause();
   void StepIn();
   void Reset();
+  // Address breakpoints (e.g. set from the disassembly).
   void SetBreakpoints(std::vector<uint64_t> addresses);
+  // Source-line breakpoints (1-based), remapped through the source map of
+  // every newly assembled program before it can run.
+  void SetSourceBreakpoints(std::vector<int> lines);
   void SetSpeedHz(uint64_t hz);
   void SendConsoleInput(std::string text);
   void ClearConsole();
@@ -181,6 +185,9 @@ class SimulationController {
   struct BreakpointsCmd {
     std::vector<uint64_t> addresses;
   };
+  struct SourceBreakpointsCmd {
+    std::vector<int> lines;
+  };
   struct SpeedCmd {
     uint64_t hz;
   };
@@ -206,9 +213,9 @@ class SimulationController {
     std::vector<MemoryRequest> requests;
   };
   using Command = std::variant<AssembleCmd, RunCmd, PauseCmd, StepCmd, ResetCmd,
-                               BreakpointsCmd, SpeedCmd, InputCmd,
-                               ClearConsoleCmd, WriteRegCmd, WritePcCmd,
-                               WriteMemCmd, ConfigCmd, ViewportCmd>;
+                               BreakpointsCmd, SourceBreakpointsCmd, SpeedCmd,
+                               InputCmd, ClearConsoleCmd, WriteRegCmd,
+                               WritePcCmd, WriteMemCmd, ConfigCmd, ViewportCmd>;
   using Clock = std::chrono::steady_clock;
 
   enum class ResumeMode : uint8_t { kRun, kStep };
@@ -221,6 +228,7 @@ class SimulationController {
   void StartRunning();
   void ExecuteSlice();
   void HandleRunResult(const RunResult& result);
+  void RebuildBreakpoints();
   void Stop(SimState state, StopReason reason);
   bool CanEdit() const;
   void Publish();
@@ -239,7 +247,9 @@ class SimulationController {
   MachineConfig config_;
   std::shared_ptr<const ProgramImage> program_;
   std::vector<Diagnostic> diagnostics_;
-  std::unordered_set<uint64_t> breakpoints_;
+  std::vector<uint64_t> address_breakpoints_;
+  std::vector<int> line_breakpoints_;
+  std::unordered_set<uint64_t> breakpoints_;  // Effective address set.
   std::vector<MemoryRequest> viewports_;
   SimState state_ = SimState::kNoProgram;
   StopReason stop_reason_ = StopReason::kNone;

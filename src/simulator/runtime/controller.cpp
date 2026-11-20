@@ -59,6 +59,9 @@ void SimulationController::Reset() { Post(ResetCmd{}); }
 void SimulationController::SetBreakpoints(std::vector<uint64_t> addresses) {
   Post(BreakpointsCmd{std::move(addresses)});
 }
+void SimulationController::SetSourceBreakpoints(std::vector<int> lines) {
+  Post(SourceBreakpointsCmd{std::move(lines)});
+}
 void SimulationController::SetSpeedHz(uint64_t hz) { Post(SpeedCmd{hz}); }
 void SimulationController::SendConsoleInput(std::string text) {
   Post(InputCmd{std::move(text)});
@@ -139,99 +142,115 @@ void SimulationController::WorkerLoop() {
 }
 
 void SimulationController::Process(Command& command) {
-  std::visit(
-      Overloaded{
-          [&](AssembleCmd& cmd) { DoAssemble(cmd); },
-          [&](RunCmd&) {
-            if (state_ == SimState::kPaused) StartRunning();
-          },
-          [&](PauseCmd&) {
-            if (state_ == SimState::kRunning ||
-                state_ == SimState::kWaitingForInput) {
-              Stop(SimState::kPaused, StopReason::kPaused);
-            }
-          },
-          [&](StepCmd&) {
-            if (state_ == SimState::kPaused) DoStep();
-          },
-          [&](ResetCmd&) {
-            console_.Reset();
-            if (program_) {
-              machine_.Reset();
-              prev_cpu_ = machine_.state();
-              Stop(SimState::kPaused, StopReason::kReset);
-            } else {
-              dirty_ = true;
-            }
-          },
-          [&](BreakpointsCmd& cmd) {
-            breakpoints_ = std::unordered_set<uint64_t>(cmd.addresses.begin(),
-                                                        cmd.addresses.end());
-            first_chunk_ = true;  // Don't stop on the breakpoint we're at.
-            dirty_ = true;
-          },
-          [&](SpeedCmd& cmd) {
-            speed_hz_ = cmd.hz;
-            run_start_ = Clock::now();
-            run_start_instret_ = machine_.state().instret;
-            dirty_ = true;
-          },
-          [&](InputCmd& cmd) {
-            console_.PushInput(cmd.text);
-            console_.AppendTranscript(cmd.text);
-            dirty_ = true;
-            if (state_ == SimState::kWaitingForInput) {
-              state_ = SimState::kPaused;
-              if (resume_mode_ == ResumeMode::kRun) {
-                StartRunning();
-              } else {
-                DoStep();
-              }
-            }
-          },
-          [&](ClearConsoleCmd&) {
-            console_.ClearOutput();
-            dirty_ = true;
-          },
-          [&](WriteRegCmd& cmd) {
-            if (CanEdit()) {
-              machine_.state().WriteReg(cmd.index, cmd.value);
-              dirty_ = true;
-            }
-          },
-          [&](WritePcCmd& cmd) {
-            if (CanEdit()) {
-              machine_.state().SetPc(cmd.value);
-              dirty_ = true;
-            }
-          },
-          [&](WriteMemCmd& cmd) {
-            if (CanEdit()) {
-              for (size_t i = 0; i < cmd.bytes.size(); ++i) {
-                (void)machine_.bus().Write8(cmd.address + i, cmd.bytes[i]);
-              }
-              dirty_ = true;
-            }
-          },
-          [&](ConfigCmd& cmd) {
-            config_ = cmd.config;
-            machine_.Configure(config_);
-            program_.reset();
-            diagnostics_.clear();
-            console_.Reset();
-            ++program_generation_;
-            prev_cpu_ = machine_.state();
-            Stop(SimState::kNoProgram, StopReason::kConfigChanged);
-          },
-          [&](ViewportCmd& cmd) {
-            viewports_ = std::move(cmd.requests);
-            for (MemoryRequest& request : viewports_) {
-              request.size = std::min(request.size, kMaxViewportBytes);
-            }
-            dirty_ = true;
-          },
-      },
-      command);
+  std::visit(Overloaded{
+                 [&](AssembleCmd& cmd) { DoAssemble(cmd); },
+                 [&](RunCmd&) {
+                   if (state_ == SimState::kPaused) StartRunning();
+                 },
+                 [&](PauseCmd&) {
+                   if (state_ == SimState::kRunning ||
+                       state_ == SimState::kWaitingForInput) {
+                     Stop(SimState::kPaused, StopReason::kPaused);
+                   }
+                 },
+                 [&](StepCmd&) {
+                   if (state_ == SimState::kPaused) DoStep();
+                 },
+                 [&](ResetCmd&) {
+                   console_.Reset();
+                   if (program_) {
+                     machine_.Reset();
+                     prev_cpu_ = machine_.state();
+                     Stop(SimState::kPaused, StopReason::kReset);
+                   } else {
+                     dirty_ = true;
+                   }
+                 },
+                 [&](BreakpointsCmd& cmd) {
+                   address_breakpoints_ = std::move(cmd.addresses);
+                   RebuildBreakpoints();
+                 },
+                 [&](SourceBreakpointsCmd& cmd) {
+                   line_breakpoints_ = std::move(cmd.lines);
+                   RebuildBreakpoints();
+                 },
+                 [&](SpeedCmd& cmd) {
+                   speed_hz_ = cmd.hz;
+                   run_start_ = Clock::now();
+                   run_start_instret_ = machine_.state().instret;
+                   dirty_ = true;
+                 },
+                 [&](InputCmd& cmd) {
+                   console_.PushInput(cmd.text);
+                   console_.AppendTranscript(cmd.text);
+                   dirty_ = true;
+                   if (state_ == SimState::kWaitingForInput) {
+                     state_ = SimState::kPaused;
+                     if (resume_mode_ == ResumeMode::kRun) {
+                       StartRunning();
+                     } else {
+                       DoStep();
+                     }
+                   }
+                 },
+                 [&](ClearConsoleCmd&) {
+                   console_.ClearOutput();
+                   dirty_ = true;
+                 },
+                 [&](WriteRegCmd& cmd) {
+                   if (CanEdit()) {
+                     machine_.state().WriteReg(cmd.index, cmd.value);
+                     dirty_ = true;
+                   }
+                 },
+                 [&](WritePcCmd& cmd) {
+                   if (CanEdit()) {
+                     machine_.state().SetPc(cmd.value);
+                     dirty_ = true;
+                   }
+                 },
+                 [&](WriteMemCmd& cmd) {
+                   if (CanEdit()) {
+                     for (size_t i = 0; i < cmd.bytes.size(); ++i) {
+                       (void)machine_.bus().Write8(cmd.address + i,
+                                                   cmd.bytes[i]);
+                     }
+                     dirty_ = true;
+                   }
+                 },
+                 [&](ConfigCmd& cmd) {
+                   config_ = cmd.config;
+                   machine_.Configure(config_);
+                   program_.reset();
+                   diagnostics_.clear();
+                   console_.Reset();
+                   ++program_generation_;
+                   prev_cpu_ = machine_.state();
+                   Stop(SimState::kNoProgram, StopReason::kConfigChanged);
+                 },
+                 [&](ViewportCmd& cmd) {
+                   viewports_ = std::move(cmd.requests);
+                   for (MemoryRequest& request : viewports_) {
+                     request.size = std::min(request.size, kMaxViewportBytes);
+                   }
+                   dirty_ = true;
+                 },
+             },
+             command);
+}
+
+void SimulationController::RebuildBreakpoints() {
+  breakpoints_ = std::unordered_set<uint64_t>(address_breakpoints_.begin(),
+                                              address_breakpoints_.end());
+  if (program_) {
+    for (const int line : line_breakpoints_) {
+      if (auto address = program_->source_map.AddressForLine(line)) {
+        breakpoints_.insert(*address);
+      }
+    }
+  }
+  first_chunk_ = true;  // Don't stop on the breakpoint we're paused at.
+  dirty_ = true;
 }
 
 bool SimulationController::CanEdit() const {
@@ -288,6 +307,7 @@ void SimulationController::DoAssemble(AssembleCmd& cmd) {
   }
   program_ = std::move(program);
   prev_cpu_ = machine_.state();
+  RebuildBreakpoints();
   Stop(SimState::kPaused, StopReason::kAssembled);
 }
 

@@ -121,6 +121,21 @@ TEST(ControllerTest, BreakpointsStopEveryIteration) {
   }
 }
 
+TEST(ControllerTest, SourceBreakpointsApplyToNextAssembly) {
+  SimulationController controller;
+  // Line 5 of kCountLoop is "addi t0, t0, 1" (line 4 is the label); set
+  // before assembling and run immediately, as the IDE does on F5.
+  controller.SetSourceBreakpoints({5});
+  controller.Assemble(std::string(kCountLoop), MachineConfig{});
+  controller.Run();
+  ASSERT_TRUE(Wait(controller, [](const UiSnapshot& s) {
+    return s.stop_reason == StopReason::kBreakpoint;
+  }));
+  const auto snap = controller.snapshot();
+  EXPECT_EQ(snap->cpu.pc, *snap->program->LookupSymbol("loop"));
+  EXPECT_EQ(snap->cpu.ReadReg(reg::kT0), 0u);
+}
+
 TEST(ControllerTest, PauseStopsInfiniteLoop) {
   SimulationController controller;
   controller.Assemble(std::string(kCountLoop), MachineConfig{});
