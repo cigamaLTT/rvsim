@@ -1,11 +1,11 @@
 #include "context.h"
 
 #include <future>
+#include <ranges>
 #include <thread>
 
 #include "TextEditor.h"
 #include "imgui.h"
-#include "ranges"
 
 namespace rvsim {
 Context::Context() : clear_color_(0.0f, 0.0f, 0.0313f, 1.0f) {

@@ -1,5 +1,9 @@
 #pragma once
+#include <chrono>
 #include <future>
+#include <string>
+#include <vector>
+
 #include "TextEditor.h"
 #include "imgui.h"
 

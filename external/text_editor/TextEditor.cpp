@@ -8,6 +8,7 @@
 //	Include files
 //
 
+#include <cctype>
 #include <cmath>
 #include <limits>
 
