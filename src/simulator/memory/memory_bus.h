@@ -44,7 +44,9 @@ class MemoryBus {
   std::expected<uint16_t, Trap> Read16(uint64_t a) { return Load<uint16_t>(a); }
   std::expected<uint32_t, Trap> Read32(uint64_t a) { return Load<uint32_t>(a); }
   std::expected<uint64_t, Trap> Read64(uint64_t a) { return Load<uint64_t>(a); }
-  std::expected<void, Trap> Write8(uint64_t a, uint8_t v) { return Store(a, v); }
+  std::expected<void, Trap> Write8(uint64_t a, uint8_t v) {
+    return Store(a, v);
+  }
   std::expected<void, Trap> Write16(uint64_t a, uint16_t v) {
     return Store(a, v);
   }

@@ -4,8 +4,7 @@ namespace rvsim {
 
 MemoryBus::MemoryBus(size_t max_pages) : ram_(max_pages) {}
 
-void MemoryBus::AttachDevice(uint64_t base, uint64_t size,
-                             MmioDevice* device) {
+void MemoryBus::AttachDevice(uint64_t base, uint64_t size, MmioDevice* device) {
   devices_.push_back(MmioRegion{base, size, device});
 }
 

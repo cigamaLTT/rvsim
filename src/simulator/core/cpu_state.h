@@ -41,7 +41,8 @@ struct CpuState {
   constexpr int64_t ReadSigned(uint8_t idx) const {
     const uint64_t v = x[idx & 31];
     if (xlen == Xlen::k32) {
-      return static_cast<int64_t>(static_cast<int32_t>(static_cast<uint32_t>(v)));
+      return static_cast<int64_t>(
+          static_cast<int32_t>(static_cast<uint32_t>(v)));
     }
     return static_cast<int64_t>(v);
   }
