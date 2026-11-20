@@ -22,7 +22,7 @@ struct Reservation {
 // register contents; use ReadSigned() to obtain the sign-extended value.
 struct CpuState {
   Xlen xlen = Xlen::k32;
-  IsaExtensions extensions;
+  IsaExtensions extensions{};
   std::array<uint64_t, 32> x{};
   std::array<uint64_t, 32> f{};
   uint64_t pc = 0;
