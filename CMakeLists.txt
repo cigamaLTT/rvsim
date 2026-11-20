@@ -209,7 +209,11 @@ if(EMSCRIPTEN)
     -sMAXIMUM_MEMORY=1GB
     "--shell-file=${CMAKE_CURRENT_SOURCE_DIR}/shell_minimal.html"
     $<$<CONFIG:Debug>:-sASSERTIONS=1>
+    # Advisory only: JS-side heap views are slower with pthreads + growth.
+    -Wno-pthreads-mem-growth
   )
+  set_property(TARGET rvsim APPEND PROPERTY LINK_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/shell_minimal.html")
 
   add_custom_command(TARGET rvsim POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
