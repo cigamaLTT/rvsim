@@ -1,4 +1,4 @@
 CompileFlags:
   CompilationDatabase: build/native-release
   # Shut up clangd about unknown Emscripten flags.
-  Remove: ["-s*", "--use-port=*"]
+  Remove: ["-sDISABLE_EXCEPTION_CATCHING=*", "-sUSE_*", "--use-port=*"]
