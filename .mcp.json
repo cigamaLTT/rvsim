@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "compiler-explorer": {
+      "type": "http",
+      "url": "https://compiler-explorer.com/mcp"
+    },
+    "deepwiki": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "serena-agent",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide",
+        "--project-from-cwd"
+      ]
+    }
+  }
+}

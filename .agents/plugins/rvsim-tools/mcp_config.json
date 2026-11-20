@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "compiler-explorer": {
+      "url": "https://compiler-explorer.com/mcp"
+    },
+    "deepwiki": {
+      "url": "https://mcp.deepwiki.com/mcp"
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "serena-agent",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide",
+        "--project-from-cwd"
+      ]
+    }
+  }
+}
