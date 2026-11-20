@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <print>
 
+#include "embedded_fonts.h"
 #include "emscripten_mainloop_stub.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -76,10 +77,21 @@ App::App(std::shared_ptr<Context> context) : context_(context) {
       ImGuiConfigFlags_NavEnableGamepad;             // Enable Gamepad Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // Enable Docking
 
-  context_->set_sans_font(
-      io.Fonts->AddFontFromFileTTF("/assets/fonts/NotoSans-Regular.ttf"));
-  context_->set_monospace_font(
-      io.Fonts->AddFontFromFileTTF("/assets/fonts/NotoSansMono-Regular.ttf"));
+  ImFontConfig font_cfg;
+  font_cfg.FontDataOwnedByAtlas = false;
+  ImFont* sans_font = io.Fonts->AddFontFromMemoryTTF(
+      const_cast<void*>(static_cast<const void*>(assets::kNotoSansRegularData)),
+      static_cast<int>(assets::kNotoSansRegularSize), 0.0f, &font_cfg);
+  ImFont* mono_font = io.Fonts->AddFontFromMemoryTTF(
+      const_cast<void*>(
+          static_cast<const void*>(assets::kNotoSansMonoRegularData)),
+      static_cast<int>(assets::kNotoSansMonoRegularSize), 0.0f, &font_cfg);
+  if (sans_font == nullptr || mono_font == nullptr) {
+    std::println(stderr, "Failed to load embedded fonts");
+    std::exit(1);
+  }
+  context_->set_sans_font(sans_font);
+  context_->set_monospace_font(mono_font);
 
   ImGui::StyleColorsDark();
 
