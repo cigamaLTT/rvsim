@@ -160,12 +160,13 @@ StepResult Machine::Step() {
 }
 
 RunResult Machine::Run(uint64_t max_steps,
-                       const std::unordered_set<uint64_t>* breakpoints) {
+                       const std::unordered_set<uint64_t>* breakpoints,
+                       bool skip_breakpoint_at_start) {
   RunResult result;
   const bool check_breakpoints =
       breakpoints != nullptr && !breakpoints->empty();
   while (result.steps < max_steps) {
-    if (check_breakpoints && result.steps > 0 &&
+    if (check_breakpoints && (result.steps > 0 || !skip_breakpoint_at_start) &&
         breakpoints->contains(state_.pc)) {
       result.hit_breakpoint = true;
       return result;

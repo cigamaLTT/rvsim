@@ -97,11 +97,13 @@ class Machine {
   StepResult Step();
 
   // Executes up to `max_steps` instructions, stopping early on exit, fault,
-  // ebreak, input wait, or before executing an address in `breakpoints`
-  // (except for the very first instruction, so a run can resume from a
-  // breakpoint).
+  // ebreak, input wait, or before executing an address in `breakpoints`.
+  // When `skip_breakpoint_at_start` is true the first instruction executes
+  // even if it has a breakpoint, so a run can resume from a breakpoint; pass
+  // false when continuing a run that was split into chunks.
   RunResult Run(uint64_t max_steps,
-                const std::unordered_set<uint64_t>* breakpoints = nullptr);
+                const std::unordered_set<uint64_t>* breakpoints = nullptr,
+                bool skip_breakpoint_at_start = true);
 
   CpuState& state() { return state_; }
   const CpuState& state() const { return state_; }

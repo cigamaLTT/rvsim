@@ -247,6 +247,11 @@ TEST(MachineTest, BreakpointsStopBeforeExecutionButNotOnResume) {
   result = machine.Run(100, &breakpoints);
   EXPECT_TRUE(result.hit_breakpoint);
   EXPECT_EQ(machine.state().ReadReg(kA0), 2u);
+  // A chunked continuation must stop immediately on the breakpoint.
+  result = machine.Run(100, &breakpoints, /*skip_breakpoint_at_start=*/false);
+  EXPECT_TRUE(result.hit_breakpoint);
+  EXPECT_EQ(result.steps, 0u);
+  EXPECT_EQ(machine.state().ReadReg(kA0), 2u);
 }
 
 TEST(MachineTest, FallingOffTheProgramFaults) {
