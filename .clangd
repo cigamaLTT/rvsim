@@ -1,3 +1,4 @@
 CompileFlags:
-  # Shut up clangd about unknown flags. 
+  CompilationDatabase: build
+  # Shut up clangd about unknown flags.
   Remove: ["-sDISABLE_EXCEPTION_CATCHING=1", "--use-port=contrib.glfw3"]

@@ -1,2 +1,4 @@
 build/
 .cache/
+.serena/
+compile_commands.json
