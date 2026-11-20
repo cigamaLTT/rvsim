@@ -5,13 +5,11 @@
 #include "windows/editor_window.h"
 
 int main() {
-  using namespace rvsim;
+  using namespace rvsim;  // NOLINT(build/namespaces)
 
   auto context = std::make_shared<Context>();
-  auto simple_window = std::make_unique<EditorWindow>(context);
-  auto demo_window = std::make_unique<DemoWindow>(context);
-  App app(std::move(context));
-  app.RegisterWindow(std::move(simple_window));
-  app.RegisterWindow(std::move(demo_window));
+  App app(context);
+  app.RegisterWindow(std::make_unique<EditorWindow>(context));
+  app.RegisterWindow(std::make_unique<DemoWindow>(context));
   app.Loop();
 }
