@@ -20,7 +20,7 @@ Guidelines for coding agents working in `rvsim`.
 - `shell_minimal.html` — Custom Emscripten HTML shell (`#canvas`) loading `coi-serviceworker.js` and gating `{{{ SCRIPT }}}` inside `<template id="emscripten-script">` until `window.crossOriginIsolated` is true.
 - `.github/workflows/ci.yml` — 4-platform CI (`linux`, `windows`, `macos`, `web`) plus `v*`-tag GitHub Release and GitHub Pages deployment.
 - `.clang-format` — Formatting rules (`BasedOnStyle: Google`).
-- `.clangd` — `clangd` configuration (`CompilationDatabase: build/native-release`, strips `-s*` and `--use-port=*`).
+- `.clangd` — `clangd` configuration (`CompilationDatabase: build/native-release`, strips `-sDISABLE_EXCEPTION_CATCHING=*`, `-sUSE_*`, and `--use-port=*` without matching `-std=c++23`).
 - `.vscode/` — `settings.json` (cSpell words, `clangd.arguments` with `--query-driver=**/*`).
 - `src/`
   - `main.cpp` — Entry point; constructs `Context`, registers `Window` instances on `App`, runs `App::Loop()`.
