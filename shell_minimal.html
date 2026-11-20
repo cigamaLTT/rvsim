@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
-    <title>Dear ImGui Emscripten example</title>
+    <title>rvsim | RISC-V Simulator</title>
     <style>
         body { margin: 0; background-color: black; overflow: hidden; }
         /* FIXME: with our GLFW example this block seems to break resizing and io.DisplaySize gets stuck */
@@ -29,9 +29,24 @@
         #canvas:focus {
           outline: none;
         }
+        #coi-status {
+            display: none;
+            position: fixed;
+            inset: 0;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            color: #e5e7eb;
+            background: rgba(0, 0, 8, 0.92);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            text-align: center;
+            z-index: 10;
+        }
     </style>
   </head>
   <body>
+    <div id="coi-status"></div>
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
     <script type='text/javascript'>
       var Module = {
@@ -63,6 +78,34 @@
         console.log("onerror: " + event);
       };
     </script>
-    {{{ SCRIPT }}}
+    <script src="coi-serviceworker.js"></script>
+    <template id="emscripten-script">{{{ SCRIPT }}}</template>
+    <script type="text/javascript">
+      (function () {
+        const statusEl = document.getElementById('coi-status');
+        function showStatus(msg) {
+          if (!statusEl) return;
+          statusEl.textContent = msg;
+          statusEl.style.display = 'flex';
+        }
+        if (window.crossOriginIsolated) {
+          const tpl = document.getElementById('emscripten-script');
+          for (const node of tpl.content.querySelectorAll('script')) {
+            const s = document.createElement('script');
+            for (const attr of node.attributes) {
+              s.setAttribute(attr.name, attr.value);
+            }
+            s.textContent = node.textContent;
+            document.body.appendChild(s);
+          }
+        } else if (!window.isSecureContext) {
+          showStatus('rvsim requires a secure context (HTTPS or localhost) with Cross-Origin Isolation enabled.');
+        } else if (!('serviceWorker' in navigator)) {
+          showStatus('Cross-Origin Isolation is unavailable (Service Workers disabled, e.g. private browsing).');
+        } else {
+          showStatus('Initializing multi-threaded WebAssembly environment...');
+        }
+      })();
+    </script>
   </body>
 </html>
