@@ -1,0 +1,230 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CPM_SOURCE_CACHE: ${{ runner.temp }}/cpm-cache
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Linux graphics and windowing dev libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            pkg-config
+
+      - name: Cache CPM sources
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/cpm-cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/get_cpm.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Configure and build (Native Release)
+        env:
+          CXX: g++-14
+        run: |
+          cmake --preset native-release
+          cmake --build --preset native-release
+
+      - name: Package Linux release archive
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p dist
+          tar -czf dist/rvsim-linux-x86_64.tar.gz -C build/native-release rvsim
+
+      - name: Upload Linux release artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-linux
+          path: dist/rvsim-linux-x86_64.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup MSVC developer environment
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: x64
+
+      - name: Cache CPM sources
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/cpm-cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/get_cpm.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Configure and build (Native Release)
+        run: |
+          cmake --preset native-release
+          cmake --build --preset native-release
+
+      - name: Package Windows release archive
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path build/native-release/rvsim.exe -DestinationPath dist/rvsim-windows-x86_64.zip -Force
+
+      - name: Upload Windows release artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-windows
+          path: dist/rvsim-windows-x86_64.zip
+
+  build-macos:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Cache CPM sources
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/cpm-cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/get_cpm.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Configure and build (Native Release)
+        run: |
+          cmake --preset native-release
+          cmake --build --preset native-release
+
+      - name: Package macOS release archive
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p dist
+          tar -czf dist/rvsim-macos-arm64.tar.gz -C build/native-release rvsim
+
+      - name: Upload macOS release artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-macos
+          path: dist/rvsim-macos-arm64.tar.gz
+
+  build-web:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: latest
+
+      - name: Cache CPM sources
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/cpm-cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/get_cpm.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Configure and build (Web)
+        run: |
+          cmake --preset web
+          cmake --build --preset web
+
+      - name: Stage Web runtime files
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p web-site dist
+          cp build/web/index.* build/web/coi-serviceworker.js web-site/
+          (cd web-site && zip -r "${GITHUB_WORKSPACE}/dist/rvsim-web.zip" .)
+
+      - name: Upload Web release artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-web
+          path: dist/rvsim-web.zip
+
+      - name: Upload Web site artifact for Pages
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-site
+          path: web-site
+
+  release:
+    needs: [build-linux, build-windows, build-macos, build-web]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          fail_on_unmatched_files: true
+
+  deploy-pages:
+    needs: [build-linux, build-windows, build-macos, build-web]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download Web site artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: web-site
+          path: web-site
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: web-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
